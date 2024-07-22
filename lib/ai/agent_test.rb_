@@ -1,0 +1,77 @@
+require 'test_helper'
+require 'openai'
+
+class AI::AgentTest < ActiveSupport::TestCase
+  def setup
+    @assistant_id = 'your_assistant_id'
+    @thread_id = 'your_thread_id'
+    @thread_instructions = 'your_thread_instructions'
+    @agent = AI::Agent.new(assistant_id: @assistant_id, thread_id: @thread_id, thread_instructions: @thread_instructions)
+  end
+
+  test 'add_message should create a new message in the thread' do
+    text = 'Hello, world!'
+    role = 'user'
+    message_params = { thread_id: @thread_id, parameters: { role: role, content: text } }
+
+    OpenAI::Client.any_instance.expects(:messages).returns(stub(create: true))
+    @agent.add_message(text, role: role)
+
+    assert_received(OpenAI::Client) { |expect| expect.messages.create(message_params) }
+  end
+
+  test 'messages should return a list of messages in the thread' do
+    messages_params = { thread_id: @thread_id }
+
+    OpenAI::Client.any_instance.expects(:messages).returns(stub(list: true))
+    @agent.messages
+
+    assert_received(OpenAI::Client) { |expect| expect.messages.list(messages_params) }
+  end
+
+  test 'last_message should return the content of the last message in the thread' do
+    message_content = 'Hello, world!'
+    messages_response = { 'data' => [{ 'content' => [{ 'text' => { 'value' => message_content } }] }] }
+
+    OpenAI::Client.any_instance.expects(:messages).returns(stub(list: messages_response))
+    assert_equal message_content, @agent.last_message
+  end
+
+  test 'run should create a new run in the thread' do
+    instructions = 'your_instructions'
+    additional_instructions = 'your_additional_instructions'
+    model = 'your_model'
+    run_params = { assistant_id: @assistant_id, instructions: instructions, additional_instructions: additional_instructions, model: model }
+
+    OpenAI::Client.any_instance.expects(:runs).returns(stub(create: true))
+    @agent.run(instructions: instructions, additional_instructions: additional_instructions, model: model)
+
+    assert_received(OpenAI::Client) { |expect| expect.runs.create(run_params) }
+  end
+
+  test 'runs should return a list of runs in the thread' do
+    runs_params = { thread_id: @thread_id }
+
+    OpenAI::Client.any_instance.expects(:runs).returns(stub(list: true))
+    @agent.runs
+
+    assert_received(OpenAI::Client) { |expect| expect.runs.list(runs_params) }
+  end
+endrequire 'test_helper'
+require 'artificial_intelligence/ai/agent'
+
+class AI::AgentTest < ActiveSupport::TestCase
+  def setup
+    @agent = AI::Agent.new
+  end
+
+  test "agent can perform action" do
+    # Add your test logic here
+  end
+
+  test "agent can learn from experience" do
+    # Add your test logic here
+  end
+
+  # Add more tests as needed
+end
