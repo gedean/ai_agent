@@ -17,11 +17,11 @@ module AI
     response.dig('choices', 0, 'message', 'content').strip
   end
 
-  def vision(prompt:, image_url:, response_format: nil)
+  def vision(prompt:, image_url:, model: AI::ADVANCED_MODEL, response_format: nil)
     messages = [{ type: :text, text: prompt },
                 { type: :image_url, image_url: { url: image_url } }]
 
-    parameters = { model: AI::ADVANCED_MODEL, messages: [{ role: :user, content: messages }] }
+    parameters = { model: model, messages: [{ role: :user, content: messages }] }
     parameters[:response_format] = { type: 'json_object' } if response_format.eql?(:json)
 
     response = OpenAI::Client.new.chat(parameters:)

@@ -1,10 +1,10 @@
 Gem::Specification.new do |s|
   s.name          = 'intelli_agent'
-  s.version       = '0.0.3'
-  s.date          = '2024-07-22'
+  s.version       = '0.0.5'
+  s.date          = '2024-07-23'
   s.platform      = Gem::Platform::RUBY
-  s.summary       = 'AI Agent'
-  s.description   = 'AI Agent.'
+  s.summary       = 'A helper layer over OpenAI API'
+  s.description   = 'A helper layer over OpenAI API'
   s.authors       = ['Gedean Dias']
   s.email         = 'gedean.dias@gmail.com'
   s.files         = Dir['README.md', 'lib/**/*']
