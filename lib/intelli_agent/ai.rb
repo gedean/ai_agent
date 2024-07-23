@@ -1,14 +1,14 @@
 # In the future, this became a bus to more than one AI provider
 module AI
-  BASIC_MODEL = ENV.fetch('OPENAI_BASIC_MODEL')
-  ADVANCED_MODEL = ENV.fetch('OPENAI_ADVANCED_MODEL')
+  BASIC_MODEL = 'gpt-4o-mini' # ENV.fetch('OPENAI_BASIC_MODEL')
+  ADVANCED_MODEL = 'gpt-4o' # ENV.fetch('OPENAI_ADVANCED_MODEL')
 
-  def self.embed(input, model: 'text-embedding-3-large')
+  def embed(input, model: 'text-embedding-3-large')
     response = OpenAI::Client.new.embeddings(parameters: { input:, model: })
     response.dig('data', 0, 'embedding')
   end
 
-  def self.single_prompt(prompt:, model: AI::BASIC_MODEL, response_format: nil)
+  def single_prompt(prompt:, model: AI::BASIC_MODEL, response_format: nil)
     parameters = { model:, messages: [{ role: 'user', content: prompt }] }
 
     parameters[:response_format] = { type: 'json_object' } if response_format.eql?(:json)
@@ -17,7 +17,7 @@ module AI
     response.dig('choices', 0, 'message', 'content').strip
   end
 
-  def self.vision(prompt:, image_url:, response_format: nil)
+  def vision(prompt:, image_url:, response_format: nil)
     messages = [{ type: :text, text: prompt },
                 { type: :image_url, image_url: { url: image_url } }]
 
@@ -29,7 +29,7 @@ module AI
     response.dig('choices', 0, 'message', 'content').strip
   end
 
-  def self.single_chat(system:, user:, model: AI::BASIC_MODEL, response_format: nil)
+  def single_chat(system:, user:, model: AI::BASIC_MODEL, response_format: nil)
     parameters = { model:,
                    messages: [
                      { role: 'system', content: system },
@@ -42,7 +42,7 @@ module AI
     response.dig('choices', 0, 'message', 'content').strip
   end
 
-  def self.chat(messages, model: AI::BASIC_MODEL, response_format: nil)
+  def chat(messages, model: AI::BASIC_MODEL, response_format: nil)
     parameters = { model:, messages: }
     parameters[:response_format] = { type: 'json_object' } if response_format.eql?(:json)
 
@@ -50,7 +50,7 @@ module AI
     response.dig('choices', 0, 'message', 'content').strip
   end
 
-  def self.models
+  def models
     OpenAI::Client.new.models.list
   end
 end

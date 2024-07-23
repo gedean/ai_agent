@@ -1,4 +1,8 @@
-class AI::Agent
+require 'openai'
+require 'intelli_agent/ai'
+
+class IntelliAgent
+  extend AI
   attr_reader :assistant, :thread, :instructions, :vector_store_id
 
   def initialize(assistant_id: nil, thread_id: nil, thread_instructions: nil, vector_store_id: nil)
@@ -19,17 +23,10 @@ class AI::Agent
     @instructions = thread_instructions || @assistant['instructions']
   end
 
-  def add_message(text, role: 'user')
-    @openai_client.messages.create(thread_id: @thread['id'], parameters: { role: role, content: text })
-  end
-
-  def messages
-    @openai_client.messages.list(thread_id: @thread['id'])
-  end
-
-  def last_message
-    messages['data'].first['content'].first['text']['value']
-  end
+  def add_message(text, role: 'user') = @openai_client.messages.create(thread_id: @thread['id'], parameters: { role: role, content: text })
+  def messages = @openai_client.messages.list(thread_id: @thread['id'])
+  def last_message = messages['data'].first['content'].first['text']['value']
+  def runs = @openai_client.runs.list(thread_id: @thread['id'])
 
   def run(instructions: nil, additional_instructions: nil, additional_message: nil, model: nil, tool_choice: nil)
     params = { assistant_id: @assistant['id'] }
@@ -63,9 +60,5 @@ class AI::Agent
         puts "Unknown status response: #{status}"
       end
     end
-  end
-
-  def runs
-    @openai_client.runs.list(thread_id: @thread['id'])
   end
 end
