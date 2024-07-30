@@ -42,7 +42,7 @@ module AI
     response.dig('choices', 0, 'message', 'content').strip
   end
 
-  def chat(messages, model: AI::BASIC_MODEL, response_format: nil)
+  def chat(messages:, model: AI::BASIC_MODEL, response_format: nil)
     parameters = { model:, messages: }
     parameters[:response_format] = { type: 'json_object' } if response_format.eql?(:json)
 
