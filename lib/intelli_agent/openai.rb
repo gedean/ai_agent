@@ -1,14 +1,16 @@
 # In the future, this became a bus to more than one AI provider
-module AI
+module IntelliAgent::OpenAI
   BASIC_MODEL = 'gpt-4o-mini' # ENV.fetch('OPENAI_BASIC_MODEL')
   ADVANCED_MODEL = 'gpt-4o' # ENV.fetch('OPENAI_ADVANCED_MODEL')
 
-  def embed(input, model: 'text-embedding-3-large')
+  def self.embed(input, model: 'text-embedding-3-large')
     response = OpenAI::Client.new.embeddings(parameters: { input:, model: })
     response.dig('data', 0, 'embedding')
   end
 
-  def single_prompt(prompt:, model: AI::BASIC_MODEL, response_format: nil)
+  def self.single_prompt(prompt:, model: :basic, response_format: nil)
+    model = select_model(model)
+    
     parameters = { model:, messages: [{ role: 'user', content: prompt }] }
 
     parameters[:response_format] = { type: 'json_object' } if response_format.eql?(:json)
@@ -17,7 +19,8 @@ module AI
     response.dig('choices', 0, 'message', 'content').strip
   end
 
-  def vision(prompt:, image_url:, model: AI::ADVANCED_MODEL, response_format: nil)
+  def self.vision(prompt:, image_url:, model: :advanced, response_format: nil)
+    model = select_model(model)
     messages = [{ type: :text, text: prompt },
                 { type: :image_url, image_url: { url: image_url } }]
 
@@ -29,7 +32,8 @@ module AI
     response.dig('choices', 0, 'message', 'content').strip
   end
 
-  def single_chat(system:, user:, model: AI::BASIC_MODEL, response_format: nil)
+  def self.single_chat(system:, user:, model: :basic, response_format: nil)
+    model = select_model(model)
     parameters = { model:,
                    messages: [
                      { role: 'system', content: system },
@@ -42,7 +46,8 @@ module AI
     response.dig('choices', 0, 'message', 'content').strip
   end
 
-  def chat(messages:, model: AI::BASIC_MODEL, response_format: nil)
+  def self.chat(messages:, model: :basic, response_format: nil)
+    model = select_model(model)
     parameters = { model:, messages: }
     parameters[:response_format] = { type: 'json_object' } if response_format.eql?(:json)
 
@@ -50,7 +55,16 @@ module AI
     response.dig('choices', 0, 'message', 'content').strip
   end
 
-  def models
-    OpenAI::Client.new.models.list
+  def self.models = OpenAI::Client.new.models.list
+
+  def self.select_model(model)
+    case model
+    when :basic
+      BASIC_MODEL
+    when :advanced
+      ADVANCED_MODEL
+    else
+      model
+    end
   end
 end
