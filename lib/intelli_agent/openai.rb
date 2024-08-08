@@ -1,7 +1,7 @@
 # In the future, this became a bus to more than one AI provider
 module IntelliAgent::OpenAI
-  BASIC_MODEL = 'gpt-4o-mini' # ENV.fetch('OPENAI_BASIC_MODEL')
-  ADVANCED_MODEL = 'gpt-4o' # ENV.fetch('OPENAI_ADVANCED_MODEL')
+  BASIC_MODEL = ENV.fetch('OPENAI_BASIC_MODEL', 'gpt-4o-mini')
+  ADVANCED_MODEL = ENV.fetch('OPENAI_ADVANCED_MODEL', 'gpt-4o-2024-08-06')
 
   def self.embed(input, model: 'text-embedding-3-large')
     response = OpenAI::Client.new.embeddings(parameters: { input:, model: })
@@ -16,7 +16,12 @@ module IntelliAgent::OpenAI
     parameters[:response_format] = { type: 'json_object' } if response_format.eql?(:json)
 
     response = OpenAI::Client.new.chat(parameters:)
-    response.dig('choices', 0, 'message', 'content').strip
+
+    if response_format.nil?
+      response.dig('choices', 0, 'message', 'content').strip
+    else
+      response
+    end
   end
 
   def self.vision(prompt:, image_url:, model: :advanced, response_format: nil)
@@ -29,7 +34,11 @@ module IntelliAgent::OpenAI
 
     response = OpenAI::Client.new.chat(parameters:)
 
-    response.dig('choices', 0, 'message', 'content').strip
+    if response_format.nil?
+      response.dig('choices', 0, 'message', 'content').strip
+    else
+      response
+    end
   end
 
   def self.single_chat(system:, user:, model: :basic, response_format: nil)
@@ -43,7 +52,11 @@ module IntelliAgent::OpenAI
     parameters[:response_format] = { type: 'json_object' } if response_format.eql?(:json)
 
     response = OpenAI::Client.new.chat(parameters:)
-    response.dig('choices', 0, 'message', 'content').strip
+    if response_format.nil?
+      response.dig('choices', 0, 'message', 'content').strip
+    else
+      response
+    end
   end
 
   def self.chat(messages:, model: :basic, response_format: nil)
@@ -52,7 +65,11 @@ module IntelliAgent::OpenAI
     parameters[:response_format] = { type: 'json_object' } if response_format.eql?(:json)
 
     response = OpenAI::Client.new.chat(parameters:)
-    response.dig('choices', 0, 'message', 'content').strip
+    if response_format.nil?
+      response.dig('choices', 0, 'message', 'content').strip
+    else
+      response
+    end
   end
 
   def self.models = OpenAI::Client.new.models.list
