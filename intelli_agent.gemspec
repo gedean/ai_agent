@@ -1,7 +1,7 @@
 Gem::Specification.new do |s|
   s.name          = 'intelli_agent'
-  s.version       = '0.1.1'
-  s.date          = '2027-08-07'
+  s.version       = '0.1.2'
+  s.date          = '2027-08-27'
   s.platform      = Gem::Platform::RUBY
   s.summary       = 'A helper layer over Anthropic and OpenAI API'
   s.description   = 'A helper layer over Anthropic and OpenAI API'
