@@ -61,6 +61,8 @@ module IntelliAgent::OpenAI
   def self.chat(messages:, model: :basic, response_format: nil, max_tokens: MAX_TOKENS)
     model = select_model(model)
     
+    messages = determine_message_format(messages).eql?(:short_format) ? convert_message_to_standard_format(messages) : messages
+    
     parameters = { model:, messages:, max_tokens: }
     parameters[:response_format] = { type: 'json_object' } if response_format.eql?(:json)
 
@@ -84,4 +86,22 @@ module IntelliAgent::OpenAI
       model
     end
   end
+
+  def self.determine_message_format(messages)
+    case messages
+    in [{ role: String, content: String }, *]
+      :standard_format
+    in [{ system: String }, { user: String }, *]
+      :short_format
+    else
+      :unknown_format
+    end
+  end
+
+  def self.convert_message_to_standard_format(messages)
+    messages.map do |msg|
+      role, content = msg.first
+      { role: role.to_s, content: content }
+    end
+  end  
 end
