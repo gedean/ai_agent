@@ -16,11 +16,7 @@ module IntelliAgent::OpenAI
     
     response = OpenAI::Client.new.chat(parameters:)
 
-    if response_format.nil?
-      response.dig('choices', 0, 'message', 'content').strip
-    else
-      response
-    end
+    response.dig('choices', 0, 'message', 'content').strip
   end
 
   def self.vision(prompt:, image_url:, model: :advanced, response_format: nil, max_tokens: MAX_TOKENS)
@@ -32,12 +28,8 @@ module IntelliAgent::OpenAI
     parameters[:response_format] = { type: 'json_object' } if response_format.eql?(:json)
 
     response = OpenAI::Client.new.chat(parameters:)
-
-    if response_format.nil?
-      response.dig('choices', 0, 'message', 'content').strip
-    else
-      response
-    end
+    
+    response.dig('choices', 0, 'message', 'content').strip
   end
 
   def self.single_chat(system:, user:, model: :basic, response_format: nil, max_tokens: MAX_TOKENS)
@@ -51,11 +43,8 @@ module IntelliAgent::OpenAI
     parameters[:response_format] = { type: 'json_object' } if response_format.eql?(:json)
 
     response = OpenAI::Client.new.chat(parameters:)
-    if response_format.nil?
-      response.dig('choices', 0, 'message', 'content').strip
-    else
-      response
-    end
+
+    response.dig('choices', 0, 'message', 'content').strip
   end
 
   def self.chat(messages:, model: :basic, response_format: nil, max_tokens: MAX_TOKENS)
@@ -67,11 +56,8 @@ module IntelliAgent::OpenAI
     parameters[:response_format] = { type: 'json_object' } if response_format.eql?(:json)
 
     response = OpenAI::Client.new.chat(parameters:)
-    if response_format.nil?
-      response.dig('choices', 0, 'message', 'content').strip
-    else
-      response
-    end
+    
+    response.dig('choices', 0, 'message', 'content').strip
   end
 
   def self.models = OpenAI::Client.new.models.list
