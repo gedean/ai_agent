@@ -8,8 +8,16 @@ module IntelliAgent::OpenAI
       dig('choices', 0, 'message', 'content')
     end
 
+    def content?
+      !content.nil?
+    end
+
     def tool_calls
       dig('choices', 0, 'message', 'tool_calls')
+    end
+
+    def tool_calls?
+      !tool_calls.nil?
     end
   end
 
