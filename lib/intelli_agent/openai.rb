@@ -1,22 +1,21 @@
 module IntelliAgent::OpenAI
   BASIC_MODEL = ENV.fetch('OPENAI_BASIC_MODEL', 'gpt-4o-mini')
   ADVANCED_MODEL = ENV.fetch('OPENAI_ADVANCED_MODEL', 'gpt-4o-2024-08-06')
-  MAX_TOKENS = ENV.fetch('OPENAI_MAX_TOKENS', 16383)
+  MAX_TOKENS = ENV.fetch('OPENAI_MAX_TOKENS', 16_383).to_i
+
+  module ResponseExtender
+    def content
+      dig('choices', 0, 'message', 'content')
+    end
+
+    def tool_calls
+      dig('choices', 0, 'message', 'tool_calls')
+    end
+  end
 
   def self.embed(input, model: 'text-embedding-3-large')
     response = OpenAI::Client.new.embeddings(parameters: { input:, model: })
     response.dig('data', 0, 'embedding')
-  end
-
-  def self.single_prompt(prompt:, model: :basic, response_format: nil, max_tokens: MAX_TOKENS)
-    model = select_model(model)
-    
-    parameters = { model:, messages: [{ role: 'user', content: prompt }], max_tokens: }
-    parameters[:response_format] = { type: 'json_object' } if response_format.eql?(:json)
-    
-    response = OpenAI::Client.new.chat(parameters:)
-
-    response.dig('choices', 0, 'message', 'content').strip
   end
 
   def self.vision(prompt:, image_url:, model: :advanced, response_format: nil, max_tokens: MAX_TOKENS)
@@ -30,6 +29,18 @@ module IntelliAgent::OpenAI
     response = OpenAI::Client.new.chat(parameters:)
     
     response.dig('choices', 0, 'message', 'content').strip
+  end  
+
+  def self.single_prompt(prompt:, model: :basic, response_format: nil, max_tokens: MAX_TOKENS, tools: nil)
+    model = select_model(model)
+    
+    parameters = { model:, messages: [{ role: 'user', content: prompt }], max_tokens: }
+    parameters[:response_format] = { type: 'json_object' } if response_format.eql?(:json)
+    parameters[:tools] = tools if tools
+
+    response = OpenAI::Client.new.chat(parameters:)
+    response.extend(ResponseExtender)
+    response
   end
 
   def self.single_chat(system:, user:, model: :basic, response_format: nil, max_tokens: MAX_TOKENS)
@@ -41,10 +52,11 @@ module IntelliAgent::OpenAI
                    ], max_tokens: }
 
     parameters[:response_format] = { type: 'json_object' } if response_format.eql?(:json)
+    parameters[:tools] = tools if tools
 
     response = OpenAI::Client.new.chat(parameters:)
-
-    response.dig('choices', 0, 'message', 'content').strip
+    response.extend(ResponseExtender)
+    response
   end
 
   def self.chat(messages:, model: :basic, response_format: nil, max_tokens: MAX_TOKENS)
@@ -54,10 +66,11 @@ module IntelliAgent::OpenAI
     
     parameters = { model:, messages:, max_tokens: }
     parameters[:response_format] = { type: 'json_object' } if response_format.eql?(:json)
+    parameters[:tools] = tools if tools
 
     response = OpenAI::Client.new.chat(parameters:)
-    
-    response.dig('choices', 0, 'message', 'content').strip
+    response.extend(ResponseExtender)
+    response
   end
 
   def self.models = OpenAI::Client.new.models.list
