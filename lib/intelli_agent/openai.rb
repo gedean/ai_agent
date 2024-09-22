@@ -46,7 +46,8 @@ module IntelliAgent::OpenAI
 
   def self.embed(input, model: 'text-embedding-3-large')
     response = OpenAI::Client.new.embeddings(parameters: { input:, model: })
-    response.dig('data', 0, 'embedding')
+    def response.embedding = dig('data', 0, 'embedding')
+    response
   end
 
   def self.vision(prompt:, image_url:, model: :advanced, response_format: nil, max_tokens: MAX_TOKENS)
@@ -59,7 +60,9 @@ module IntelliAgent::OpenAI
 
     response = OpenAI::Client.new.chat(parameters:)
     
-    response.dig('choices', 0, 'message', 'content').strip
+    def response.content = dig('choices', 0, 'message', 'content').strip
+
+    response
   end  
 
   def self.single_prompt(prompt:, model: :basic, response_format: nil, max_tokens: MAX_TOKENS, tools: nil, function_run_context: self)
