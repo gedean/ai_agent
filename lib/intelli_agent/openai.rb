@@ -8,6 +8,10 @@ module IntelliAgent::OpenAI
       dig('choices', 0, 'message', 'content')
     end
 
+    def message
+      dig('choices', 0, 'message')
+    end
+
     def content?
       !content.nil?
     end
@@ -18,6 +22,25 @@ module IntelliAgent::OpenAI
 
     def tool_calls?
       !tool_calls.nil?
+    end
+
+    def functions
+      return if tool_calls.nil?
+      
+      functions = tool_calls.filter { |tool| tool['type'].eql? 'function' }
+      return if functions.empty?
+      
+      functions_list = []
+      functions.map.with_index do |function, function_index|
+        function_def = tool_calls.dig(function_index, 'function')
+        functions_list << { id: function['id'], name: function_def['name'], arguments: Oj.load(function_def['arguments'], symbol_keys: true) }
+      end
+
+      functions_list
+    end
+
+    def functions?
+      !functions.nil?
     end
   end
 
@@ -39,38 +62,17 @@ module IntelliAgent::OpenAI
     response.dig('choices', 0, 'message', 'content').strip
   end  
 
-  def self.single_prompt(prompt:, model: :basic, response_format: nil, max_tokens: MAX_TOKENS, tools: nil)
-    model = select_model(model)
-    
-    parameters = { model:, messages: [{ role: 'user', content: prompt }], max_tokens: }
-    parameters[:response_format] = { type: 'json_object' } if response_format.eql?(:json)
-    parameters[:tools] = tools if tools
-
-    response = OpenAI::Client.new.chat(parameters:)
-    response.extend(ResponseExtender)
-    response
+  def self.single_prompt(prompt:, model: :basic, response_format: nil, max_tokens: MAX_TOKENS, tools: nil, function_run_context: self)
+    chat(messages: [{ user: prompt }], model:, response_format:, max_tokens:, tools:, function_run_context:)
   end
 
-  def self.single_chat(system:, user:, model: :basic, response_format: nil, max_tokens: MAX_TOKENS)
-    model = select_model(model)
-    parameters = { model:,
-                   messages: [
-                     { role: 'system', content: system },
-                     { role: 'user', content: user }
-                   ], max_tokens: }
-
-    parameters[:response_format] = { type: 'json_object' } if response_format.eql?(:json)
-    parameters[:tools] = tools if tools
-
-    response = OpenAI::Client.new.chat(parameters:)
-    response.extend(ResponseExtender)
-    response
+  def self.single_chat(system:, user:, model: :basic, response_format: nil, max_tokens: MAX_TOKENS, tools: nil, function_run_context: self)
+    chat(messages: [{ system: }, { user: }], model:, response_format:, max_tokens:, tools:, function_run_context:)
   end
 
-  def self.chat(messages:, model: :basic, response_format: nil, max_tokens: MAX_TOKENS)
+  def self.chat(messages:, model: :basic, response_format: nil, max_tokens: MAX_TOKENS, tools: nil, function_run_context: self)
     model = select_model(model)
-    
-    messages = determine_message_format(messages).eql?(:short_format) ? convert_message_to_standard_format(messages) : messages
+    messages = parse_messages(messages)
     
     parameters = { model:, messages:, max_tokens: }
     parameters[:response_format] = { type: 'json_object' } if response_format.eql?(:json)
@@ -78,6 +80,23 @@ module IntelliAgent::OpenAI
 
     response = OpenAI::Client.new.chat(parameters:)
     response.extend(ResponseExtender)
+
+    if response.functions?
+      parameters[:messages] << response.message
+
+      response.functions.each do |function|
+        parameters[:messages] << {
+          tool_call_id: function[:id],
+          role: :tool,
+          name: function[:name],
+          content: parameters[:function_run_context].send(function[:name], **function[:arguments])
+        }
+      end
+
+      response = OpenAI::Client.new.chat(parameters:)
+      response.extend(ResponseExtender)
+    end
+
     response
   end
 
@@ -94,21 +113,15 @@ module IntelliAgent::OpenAI
     end
   end
 
-  def self.determine_message_format(messages)
+  def self.parse_messages(messages)
     case messages
     in [{ role: String, content: String }, *]
-      :standard_format
-    in [{ system: String }, { user: String }, *]
-      :short_format
+      messages
     else
-      :unknown_format
+      messages.map do |msg|
+        role, content = msg.first
+        { role: role.to_s, content: content }
+      end
     end
   end
-
-  def self.convert_message_to_standard_format(messages)
-    messages.map do |msg|
-      role, content = msg.first
-      { role: role.to_s, content: content }
-    end
-  end  
 end

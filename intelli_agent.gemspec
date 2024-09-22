@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name          = 'intelli_agent'
-  s.version       = '0.2.1'
+  s.version       = '0.2.2'
   s.date          = '2027-09-21'
   s.platform      = Gem::Platform::RUBY
   s.summary       = 'A helper layer over Anthropic and OpenAI API'
@@ -14,5 +14,6 @@ Gem::Specification.new do |s|
   s.license       = 'MIT'
   s.add_dependency 'ruby-openai', '~> 7.1'
   s.add_dependency 'anthropic', '~> 0.3'
+  s.add_dependency 'oj', '~> 3'
   s.post_install_message = %q{Please check readme file for use instructions.}
 end
