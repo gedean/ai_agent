@@ -4,25 +4,13 @@ module IntelliAgent::OpenAI
   MAX_TOKENS = ENV.fetch('OPENAI_MAX_TOKENS', 16_383).to_i
 
   module ResponseExtender
-    def content
-      dig('choices', 0, 'message', 'content')
-    end
+    def message = dig('choices', 0, 'message')
 
-    def message
-      dig('choices', 0, 'message')
-    end
+    def content = dig('choices', 0, 'message', 'content')
+    def content? = !content.nil?
 
-    def content?
-      !content.nil?
-    end
-
-    def tool_calls
-      dig('choices', 0, 'message', 'tool_calls')
-    end
-
-    def tool_calls?
-      !tool_calls.nil?
-    end
+    def tool_calls = dig('choices', 0, 'message', 'tool_calls')
+    def tool_calls? = !tool_calls.nil?
 
     def functions
       return if tool_calls.nil?
@@ -39,12 +27,10 @@ module IntelliAgent::OpenAI
       functions_list
     end
 
-    def functions?
-      !functions.nil?
-    end
+    def functions? = !functions.nil?
   end
 
-  def self.embed(input, model: 'text-embedding-3-large')
+  def self.embeddings(input, model: 'text-embedding-3-large')
     response = OpenAI::Client.new.embeddings(parameters: { input:, model: })
     def response.embedding = dig('data', 0, 'embedding')
     response
