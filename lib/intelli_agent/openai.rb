@@ -55,7 +55,7 @@ module IntelliAgent::OpenAI
     chat(messages: [{ user: prompt }], model:, response_format:, max_tokens:, tools:, function_run_context:)
   end
 
-  def self.single_chat(system:, user:, model: :basic, response_format: nil, max_tokens: MAX_TOKENS, tools: nil, function_run_context: self)
+  def self.single_chat(system:, user:, model: :basic, response_format: nil, max_tokens: MAX_TOKENS, tools: nil, function_run_context: nil)
     chat(messages: [{ system: }, { user: }], model:, response_format:, max_tokens:, tools:, function_run_context:)
   end
 
@@ -71,6 +71,8 @@ module IntelliAgent::OpenAI
     response.extend(ResponseExtender)
 
     if response.functions?
+      raise 'Function run context not provided' if function_run_context.nil?
+
       parameters[:messages] << response.message
 
       response.functions.each do |function|
@@ -78,7 +80,7 @@ module IntelliAgent::OpenAI
           tool_call_id: function[:id],
           role: :tool,
           name: function[:name],
-          content: parameters[:function_run_context].send(function[:name], **function[:arguments])
+          content: function_run_context.send(function[:name], **function[:arguments])
         }
       end
 
