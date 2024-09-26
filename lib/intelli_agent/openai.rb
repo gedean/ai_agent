@@ -1,6 +1,10 @@
 module IntelliAgent::OpenAI
-  BASIC_MODEL = ENV.fetch('OPENAI_BASIC_MODEL', 'gpt-4o-mini')
-  ADVANCED_MODEL = ENV.fetch('OPENAI_ADVANCED_MODEL', 'gpt-4o-2024-08-06')
+  GPT_BASIC_MODEL = ENV.fetch('OPENAI_GPT_BASIC_MODEL', 'gpt-4o-mini')
+  GPT_ADVANCED_MODEL = ENV.fetch('OPENAI_GPT_ADVANCED_MODEL', 'gpt-4o-2024-08-06')
+
+  O1_BASIC_MODEL = ENV.fetch('OPENAI_O1_BASIC_MODEL', 'o1-mini')
+  O1_ADVANCED_MODEL = ENV.fetch('OPENAI_O1_ADVANCED_MODEL', 'o1-preview')
+  
   MAX_TOKENS = ENV.fetch('OPENAI_MAX_TOKENS', 16_383).to_i
 
   module ResponseExtender
@@ -36,7 +40,7 @@ module IntelliAgent::OpenAI
     response
   end
 
-  def self.vision(prompt:, image_url:, model: :advanced, response_format: nil, max_tokens: MAX_TOKENS)
+  def self.vision(prompt:, image_url:, model: :gpt_advanced, response_format: nil, max_tokens: MAX_TOKENS)
     model = select_model(model)
     messages = [{ type: :text, text: prompt },
                 { type: :image_url, image_url: { url: image_url } }]
@@ -51,19 +55,28 @@ module IntelliAgent::OpenAI
     response
   end  
 
-  def self.single_prompt(prompt:, model: :basic, response_format: nil, max_tokens: MAX_TOKENS, tools: nil, function_run_context: self)
+  def self.single_prompt(prompt:, model: :gpt_basic, response_format: nil, max_tokens: MAX_TOKENS, tools: nil, function_run_context: self)
     chat(messages: [{ user: prompt }], model:, response_format:, max_tokens:, tools:, function_run_context:)
   end
 
-  def self.single_chat(system:, user:, model: :basic, response_format: nil, max_tokens: MAX_TOKENS, tools: nil, function_run_context: nil)
+  def self.single_chat(system:, user:, model: :gpt_basic, response_format: nil, max_tokens: MAX_TOKENS, tools: nil, function_run_context: nil)
     chat(messages: [{ system: }, { user: }], model:, response_format:, max_tokens:, tools:, function_run_context:)
   end
 
-  def self.chat(messages:, model: :basic, response_format: nil, max_tokens: MAX_TOKENS, tools: nil, function_run_context: self)
+  def self.chat(messages:, model: :gpt_basic, response_format: nil, max_tokens: MAX_TOKENS, tools: nil, function_run_context: self)
     model = select_model(model)
+
+    # o1 models doesn't support max_tokens, instead max_completion_tokens
+    is_o1_model = model.start_with?('o1')
+    max_completion_tokens = max_tokens if is_o1_model
+
     messages = parse_messages(messages)
     
-    parameters = { model:, messages:, max_tokens: }
+    parameters = { model:, messages: }
+
+    parameters[:max_completion_tokens] = max_completion_tokens if is_o1_model
+    parameters[:max_tokens] = max_completion_tokens unless is_o1_model
+
     parameters[:response_format] = { type: 'json_object' } if response_format.eql?(:json)
     parameters[:tools] = tools if tools
 
@@ -95,10 +108,14 @@ module IntelliAgent::OpenAI
 
   def self.select_model(model)
     case model
-    when :basic
-      BASIC_MODEL
-    when :advanced
-      ADVANCED_MODEL
+    when :gpt_basic
+      GPT_BASIC_MODEL
+    when :gpt_advanced
+      GPT_ADVANCED_MODEL
+    when :o1_basic
+      O1_BASIC_MODEL
+    when :o1_advanced
+      O1_ADVANCED_MODEL
     else
       model
     end
