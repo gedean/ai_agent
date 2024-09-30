@@ -36,7 +36,7 @@ module IntelliAgent::OpenAI
 
   def self.embeddings(input, model: 'text-embedding-3-large')
     response = OpenAI::Client.new.embeddings(parameters: { input:, model: })
-    def response.embedding = dig('data', 0, 'embedding')
+    def response.embeddings = dig('data', 0, 'embedding')
     response
   end
 
