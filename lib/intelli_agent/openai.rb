@@ -73,15 +73,15 @@ module IntelliAgent::OpenAI
     response
   end  
 
-  def self.single_prompt(prompt:, model: :gpt_basic, response_format: nil, max_tokens: MAX_TOKENS, store: true, tools: nil, auto_run_functions: false, function_context: nil)
+  def self.single_prompt(prompt:, model: :gpt_basic, response_format: nil, max_tokens: MAX_TOKENS, store: true, metadata: nil, tools: nil, auto_run_functions: false, function_context: nil)
     chat(messages: [{ user: prompt }], model:, response_format:, max_tokens:, store:, tools:, auto_run_functions:, function_context:)
   end
 
-  def self.single_chat(system:, user:, model: :gpt_basic, response_format: nil, max_tokens: MAX_TOKENS, store: true, tools: nil, auto_run_functions: false, function_context: nil)
+  def self.single_chat(system:, user:, model: :gpt_basic, response_format: nil, max_tokens: MAX_TOKENS, store: true, metadata: nil, tools: nil, auto_run_functions: false, function_context: nil)
     chat(messages: [{ system: }, { user: }], model:, response_format:, max_tokens:, store:, tools:, auto_run_functions:, function_context:)
   end
 
-  def self.chat(messages:, model: :gpt_basic, response_format: nil, max_tokens: MAX_TOKENS, store: true, tools: nil, auto_run_functions: false, function_context: nil)
+  def self.chat(messages:, model: :gpt_basic, response_format: nil, max_tokens: MAX_TOKENS, store: true, metadata: nil, tools: nil, auto_run_functions: false, function_context: nil)
     model = select_model(model)
 
     # o1 models doesn't support max_tokens, instead max_completion_tokens
@@ -91,7 +91,8 @@ module IntelliAgent::OpenAI
     messages = parse_messages(messages)
     
     parameters = { model:, messages:, store: }
-
+    parameters[:metadata] = metadata if metadata
+    
     parameters[:max_completion_tokens] = max_completion_tokens if is_o1_model
     parameters[:max_tokens] = max_completion_tokens unless is_o1_model
 
