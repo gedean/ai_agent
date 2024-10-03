@@ -55,15 +55,15 @@ module IntelliAgent::OpenAI
     response
   end  
 
-  def self.single_prompt(prompt:, model: :gpt_basic, response_format: nil, max_tokens: MAX_TOKENS, tools: nil, function_run_context: self)
-    chat(messages: [{ user: prompt }], model:, response_format:, max_tokens:, tools:, function_run_context:)
+  def self.single_prompt(prompt:, model: :gpt_basic, response_format: nil, max_tokens: MAX_TOKENS, tools: nil, auto_run_functions: false, function_context: nil)
+    chat(messages: [{ user: prompt }], model:, response_format:, max_tokens:, tools:, auto_run_functions:, function_context:)
   end
 
-  def self.single_chat(system:, user:, model: :gpt_basic, response_format: nil, max_tokens: MAX_TOKENS, tools: nil, function_run_context: nil)
-    chat(messages: [{ system: }, { user: }], model:, response_format:, max_tokens:, tools:, function_run_context:)
+  def self.single_chat(system:, user:, model: :gpt_basic, response_format: nil, max_tokens: MAX_TOKENS, tools: nil, auto_run_functions: false, function_context: nil)
+    chat(messages: [{ system: }, { user: }], model:, response_format:, max_tokens:, tools:, auto_run_functions:, function_context:)
   end
 
-  def self.chat(messages:, model: :gpt_basic, response_format: nil, max_tokens: MAX_TOKENS, tools: nil, function_run_context: self)
+  def self.chat(messages:, model: :gpt_basic, response_format: nil, max_tokens: MAX_TOKENS, tools: nil, auto_run_functions: false, function_context: nil)
     model = select_model(model)
 
     # o1 models doesn't support max_tokens, instead max_completion_tokens
@@ -83,8 +83,8 @@ module IntelliAgent::OpenAI
     response = OpenAI::Client.new.chat(parameters:)
     response.extend(ResponseExtender)
 
-    if response.functions?
-      raise 'Function run context not provided' if function_run_context.nil?
+    if response.functions? && auto_run_functions
+      raise 'Function context not provided for auto-running functions' if function_context.nil?
 
       parameters[:messages] << response.message
 
@@ -93,7 +93,7 @@ module IntelliAgent::OpenAI
           tool_call_id: function[:id],
           role: :tool,
           name: function[:name],
-          content: function_run_context.send(function[:name], **function[:arguments])
+          content: function_context.send(function[:name], **function[:arguments])
         }
       end
 
