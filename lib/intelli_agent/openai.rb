@@ -72,7 +72,7 @@ module IntelliAgent::OpenAI
 
     messages = parse_messages(messages)
     
-    parameters = { model:, messages: }
+    parameters = { model:, messages:, store: true }
 
     parameters[:max_completion_tokens] = max_completion_tokens if is_o1_model
     parameters[:max_tokens] = max_completion_tokens unless is_o1_model
