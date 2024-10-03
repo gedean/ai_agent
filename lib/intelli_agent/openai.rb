@@ -8,6 +8,8 @@ module IntelliAgent::OpenAI
   MAX_TOKENS = ENV.fetch('OPENAI_MAX_TOKENS', 16_383).to_i
 
   module ResponseExtender
+    def chat_params = self[:chat_params]
+
     def message = dig('choices', 0, 'message')
 
     def content = dig('choices', 0, 'message', 'content')
@@ -24,11 +26,27 @@ module IntelliAgent::OpenAI
       
       functions_list = []
       functions.map.with_index do |function, function_index|
-        function_def = tool_calls.dig(function_index, 'function')
-        functions_list << { id: function['id'], name: function_def['name'], arguments: Oj.load(function_def['arguments'], symbol_keys: true) }
+        function_info = tool_calls.dig(function_index, 'function')
+        function_def = { id: function['id'], name: function_info['name'], arguments: Oj.load(function_info['arguments'], symbol_keys: true) }
+        
+        def function_def.run(context:)
+          {
+            tool_call_id: self[:id],
+            role: :tool,
+            name: self[:name],
+            content: context.send(self[:name], **self[:arguments])
+          }
+        end
+
+        functions_list << function_def
       end
 
       functions_list
+    end
+
+    def functions_run_all(context:)
+      raise 'No functions to run' if functions.nil?
+      functions.map { |function| function.run(context:) }
     end
 
     def functions? = !functions.nil?
@@ -55,15 +73,15 @@ module IntelliAgent::OpenAI
     response
   end  
 
-  def self.single_prompt(prompt:, model: :gpt_basic, response_format: nil, max_tokens: MAX_TOKENS, tools: nil, auto_run_functions: false, function_context: nil)
-    chat(messages: [{ user: prompt }], model:, response_format:, max_tokens:, tools:, auto_run_functions:, function_context:)
+  def self.single_prompt(prompt:, model: :gpt_basic, response_format: nil, max_tokens: MAX_TOKENS, store: true, tools: nil, auto_run_functions: false, function_context: nil)
+    chat(messages: [{ user: prompt }], model:, response_format:, max_tokens:, store:, tools:, auto_run_functions:, function_context:)
   end
 
-  def self.single_chat(system:, user:, model: :gpt_basic, response_format: nil, max_tokens: MAX_TOKENS, tools: nil, auto_run_functions: false, function_context: nil)
-    chat(messages: [{ system: }, { user: }], model:, response_format:, max_tokens:, tools:, auto_run_functions:, function_context:)
+  def self.single_chat(system:, user:, model: :gpt_basic, response_format: nil, max_tokens: MAX_TOKENS, store: true, tools: nil, auto_run_functions: false, function_context: nil)
+    chat(messages: [{ system: }, { user: }], model:, response_format:, max_tokens:, store:, tools:, auto_run_functions:, function_context:)
   end
 
-  def self.chat(messages:, model: :gpt_basic, response_format: nil, max_tokens: MAX_TOKENS, tools: nil, auto_run_functions: false, function_context: nil)
+  def self.chat(messages:, model: :gpt_basic, response_format: nil, max_tokens: MAX_TOKENS, store: true, tools: nil, auto_run_functions: false, function_context: nil)
     model = select_model(model)
 
     # o1 models doesn't support max_tokens, instead max_completion_tokens
@@ -72,7 +90,7 @@ module IntelliAgent::OpenAI
 
     messages = parse_messages(messages)
     
-    parameters = { model:, messages:, store: true }
+    parameters = { model:, messages:, store: }
 
     parameters[:max_completion_tokens] = max_completion_tokens if is_o1_model
     parameters[:max_tokens] = max_completion_tokens unless is_o1_model
@@ -81,26 +99,18 @@ module IntelliAgent::OpenAI
     parameters[:tools] = tools if tools
 
     response = OpenAI::Client.new.chat(parameters:)
+    
+    response[:chat_params] = parameters   
     response.extend(ResponseExtender)
 
     if response.functions? && auto_run_functions
       raise 'Function context not provided for auto-running functions' if function_context.nil?
-
       parameters[:messages] << response.message
+      parameters[:messages] += response.functions_run_all(context: function_context)
 
-      response.functions.each do |function|
-        parameters[:messages] << {
-          tool_call_id: function[:id],
-          role: :tool,
-          name: function[:name],
-          content: function_context.send(function[:name], **function[:arguments])
-        }
-      end
-
-      response = OpenAI::Client.new.chat(parameters:)
-      response.extend(ResponseExtender)
+      response = chat(**parameters.except(:chat_params))
     end
-
+   
     response
   end
 
