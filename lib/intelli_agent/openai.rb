@@ -58,19 +58,9 @@ module IntelliAgent::OpenAI
     response
   end
 
-  def self.vision(prompt:, image_url:, model: :gpt_advanced, response_format: nil, max_tokens: MAX_TOKENS)
-    model = select_model(model)
-    messages = [{ type: :text, text: prompt },
-                { type: :image_url, image_url: { url: image_url } }]
-
-    parameters = { model: model, messages: [{ role: :user, content: messages }], max_tokens: }
-    parameters[:response_format] = { type: 'json_object' } if response_format.eql?(:json)
-
-    response = OpenAI::Client.new.chat(parameters:)
-    
-    def response.content = dig('choices', 0, 'message', 'content').strip
-
-    response
+  def self.vision(prompt:, image_url:, model: :gpt_advanced, response_format: nil, max_tokens: MAX_TOKENS, store: true, metadata: nil, tools: nil, auto_run_functions: false, function_context: nil)
+    message_content = [{ type: :text, text: prompt }, { type: :image_url, image_url: { url: image_url } }]
+    chat(messages: [{ role: :user, content: message_content }], model:, response_format:, max_tokens:, store:, tools:, auto_run_functions:, function_context:)    
   end  
 
   def self.single_prompt(prompt:, model: :gpt_basic, response_format: nil, max_tokens: MAX_TOKENS, store: true, metadata: nil, tools: nil, auto_run_functions: false, function_context: nil)
@@ -83,18 +73,17 @@ module IntelliAgent::OpenAI
 
   def self.chat(messages:, model: :gpt_basic, response_format: nil, max_tokens: MAX_TOKENS, store: true, metadata: nil, tools: nil, auto_run_functions: false, function_context: nil)
     model = select_model(model)
-
-    # o1 models doesn't support max_tokens, instead max_completion_tokens
     is_o1_model = model.start_with?('o1')
-    max_completion_tokens = max_tokens if is_o1_model
 
     messages = parse_messages(messages)
     
     parameters = { model:, messages:, store: }
     parameters[:metadata] = metadata if metadata
-    
-    parameters[:max_completion_tokens] = max_completion_tokens if is_o1_model
-    parameters[:max_tokens] = max_completion_tokens unless is_o1_model
+
+
+    # o1 family models doesn't support max_tokens params. Instead, use max_completion_tokens
+    parameters[:max_completion_tokens] = max_tokens if is_o1_model
+    parameters[:max_tokens] = max_tokens unless is_o1_model
 
     parameters[:response_format] = { type: 'json_object' } if response_format.eql?(:json)
     parameters[:tools] = tools if tools
@@ -134,7 +123,7 @@ module IntelliAgent::OpenAI
 
   def self.parse_messages(messages)
     case messages
-    in [{ role: String, content: String }, *]
+    in [{ role: String | Symbol, content: String | Array }, *]
       messages
     else
       messages.map do |msg|
