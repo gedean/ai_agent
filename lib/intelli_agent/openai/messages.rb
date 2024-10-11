@@ -1,5 +1,4 @@
 class IntelliAgent::OpenAI::Messages < Array
-  # VALID_ROLES = %i[system user assistant function tool].freeze
 
   def initialize messages = nil
     super parse_messages(messages)
@@ -22,6 +21,9 @@ Important note: the content can be either a string or an array.
     return [] if messages.nil?
 
     messages = [messages] unless messages.is_a?(Array)
+    
+    # if first element is ok, then do not parse the rest
+    return messages if messages.first in { role: String | Symbol, content: String | Array | Hash}
 
     messages.flat_map do |msg|
       if msg.is_a?(Hash)

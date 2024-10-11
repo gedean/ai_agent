@@ -80,7 +80,6 @@ module IntelliAgent::OpenAI
     parameters = { model:, messages:, store: }
     parameters[:metadata] = metadata if metadata
 
-
     # o1 family models doesn't support max_tokens params. Instead, use max_completion_tokens
     parameters[:max_completion_tokens] = max_tokens if is_o1_model
     parameters[:max_tokens] = max_tokens unless is_o1_model
@@ -88,7 +87,11 @@ module IntelliAgent::OpenAI
     parameters[:response_format] = { type: 'json_object' } if response_format.eql?(:json)
     parameters[:tools] = tools if tools
 
-    response = OpenAI::Client.new.chat(parameters:)
+    begin
+      response = OpenAI::Client.new.chat(parameters:)
+    rescue => e
+      raise "Error in OpenAI chat: #{e.message}\nParameters: #{parameters.inspect}"
+    end
     
     response[:chat_params] = parameters   
     response.extend(ResponseExtender)
