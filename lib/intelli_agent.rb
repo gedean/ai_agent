@@ -6,3 +6,4 @@ end
 
 require 'intelli_agent/anthropic'
 require 'intelli_agent/openai'
+require 'intelli_agent/openai/messages'

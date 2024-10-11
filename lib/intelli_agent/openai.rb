@@ -75,7 +75,7 @@ module IntelliAgent::OpenAI
     model = select_model(model)
     is_o1_model = model.start_with?('o1')
 
-    messages = parse_messages(messages)
+    messages = IntelliAgent::OpenAI::Messages.new(messages) unless messages.is_a?(IntelliAgent::OpenAI::Messages)
     
     parameters = { model:, messages:, store: }
     parameters[:metadata] = metadata if metadata
@@ -118,18 +118,6 @@ module IntelliAgent::OpenAI
       O1_ADVANCED_MODEL
     else
       model
-    end
-  end
-
-  def self.parse_messages(messages)
-    case messages
-    in [{ role: String | Symbol, content: String | Array }, *]
-      messages
-    else
-      messages.map do |msg|
-        role, content = msg.first
-        { role: role.to_s, content: content }
-      end
     end
   end
 end
